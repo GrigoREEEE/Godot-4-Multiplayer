@@ -1,6 +1,6 @@
 extends Control
 
-@export var address = "10.0.0.127"
+@export var address = "10.0.0.255"
 @export var port = 8910
 var peer
 
@@ -14,6 +14,8 @@ func _ready():
 	multiplayer.connection_failed.connect(connection_failed)
 	if "--server" in OS.get_cmdline_args():
 		host_game()
+		
+	$Server_Browser.join_game.connect(join_by_ip)
 	pass # Replace with function body.
 
 
@@ -82,13 +84,24 @@ func _on_host_button_down():
 
 
 func _on_join_button_down():
-	peer = ENetMultiplayerPeer.new()
-	peer.create_client(address, port)
-	peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
-	multiplayer.set_multiplayer_peer(peer)	
-	pass # Replace with function body.
+	join_by_ip(address)
 
+func join_by_ip(ip):
+	peer = ENetMultiplayerPeer.new()
+	peer.create_client(ip, port)
+	peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	multiplayer.set_multiplayer_peer(peer)
+	pass # Replace with function body.
 
 func _on_start_game_button_down():
 	start_game.rpc()
+	pass # Replace with function body.
+
+
+func _on_button_button_down():
+	GameManager.players[GameManager.players.size() + 1] = {
+			"name" : "testBob",
+			"id" : 1,
+			"score": 0
+		}
 	pass # Replace with function body.

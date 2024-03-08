@@ -1,10 +1,13 @@
 extends Control
-signal found_sever
-signal server_removed
+signal found_sever(ip,port,room_info)
+signal update_sever(ip,port,room_info)
+signal join_game(ip)
 
 var broadcast_timer : Timer
 var broadcaster : PacketPeerUDP
 var listener : PacketPeerUDP
+
+@export var server_info : PackedScene
 
 var room_info : Dictionary = {"name": "name", "player_count": 0}
 @export var listen_port = 1234
@@ -39,7 +42,24 @@ func _process(delta):
 		var bytes = listener.get_packet()
 		var data = bytes.get_string_from_ascii()
 		var room_info = JSON.parse_string(data)
-		print("Server IP: " + server_ip + "\n Server IP: " + str(server_port) + "\n Room Info:" + room_info)
+		print("Server IP: " + str(server_ip) + "\n Server IP: " + str(server_port) + "\n Room Info:" + str(room_info))
+		
+		for i in $Panel/VBoxContainer.get_children():
+			if i.name == room_info.name:
+				i.get_node("IP").text = server_ip
+				i.get_node("Player_Count").text = str(room_info.player_count)
+				update_sever.emit(server_ip,server_port,room_info)
+				return
+
+		var current_info = server_info.instantiate()
+		current_info.name  = room_info.name
+		current_info.get_node("Name").text = room_info.name
+		current_info.get_node("IP").text = server_ip
+		current_info.get_node("Player_Count").text = str(room_info.player_count)
+		$Panel/VBoxContainer.add_child(current_info)
+		current_info.join_game.connect(join_by_ip)
+		found_sever.emit(server_ip,server_port,room_info)
+			
 
 func _on_broadcast_timer_timeout():
 	print("Broadcasting Game!")
@@ -52,7 +72,7 @@ func _on_broadcast_timer_timeout():
 
 func cleanup():
 	listener.clsoe()
-	$broadcast_timer.stop()
+	broadcast_timer.stop()
 	if broadcaster != null:
 		broadcaster.close()
 		
@@ -66,3 +86,6 @@ func setup():
 
 func exit_tree():
 	cleanup()
+	
+func join_by_ip(ip):
+	join_game.emit(ip)
